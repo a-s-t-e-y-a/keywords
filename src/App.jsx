@@ -18,7 +18,7 @@ function App() {
     const openAIKey = formData.get('openAIKey');
 
     try {
-      const result = await axios.post('http://localhost:4000/api/generate-map', {
+      const result = await axios.post('http://194.163.34.72:4000/api/generate-map', {
         subject,
         depth,
         openAIKey
