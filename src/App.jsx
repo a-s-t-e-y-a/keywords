@@ -6,6 +6,7 @@ import axios from 'axios'
 function App() {
   const [response, setResponse] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [keywords, setKeywords] = useState([])
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -26,6 +27,9 @@ function App() {
       const jsonResponse = result.data;
       console.log(jsonResponse);
       setResponse(jsonResponse);
+      if (jsonResponse.keywords) {
+        setKeywords(jsonResponse.keywords);
+      }
     } catch (error) {
       console.error('Error generating knowledge map:', error);
       setResponse('Error: ' + error.message);
@@ -34,69 +38,45 @@ function App() {
     }
   };
 
-  const renderTable = (data) => {
-    if (!data) return null;
+  const downloadCSV = () => {
+    if (!keywords.length) return;
     
-    try {
-      const parsed = typeof data === 'string' ? JSON.parse(data.replace(/<\/?html>/g, '')) : data;
-      const topics = parsed.topics;
-      console.log(topics);
-      return (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-black bg-white border border-gray-300">
-            <thead>
-              <tr>
-                <th className="px-4 py-2 border">Level 1</th>
-                <th className="px-4 py-2 border">Level 2</th>
-                <th className="px-4 py-2 border">Level 3</th>
-                <th className="px-4 py-2 border">Level 4</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topics.level_1.map((level1Item, index) => {
-                const level2Items = topics.level_2[level1Item] || [];
-                let rows = [];
+    const csvContent = "data:text/csv;charset=utf-8," + keywords.join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "keywords.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-                level2Items.forEach((level2Item, l2Index) => {
-                  const level3Items = topics.level_3[level2Item] || [];
-                  
-                  level3Items.forEach((level3Item, l3Index) => {
-                    const level4Items = topics.level_4[level3Item] || [];
-                    
-                    level4Items.forEach((level4Item, l4Index) => {
-                      rows.push(
-                        <tr key={`${index}-${l2Index}-${l3Index}-${l4Index}`}>
-                          {l2Index === 0 && l3Index === 0 && l4Index === 0 && (
-                            <td className="px-4 py-2 border" rowSpan={level2Items.length * 5 * 5}>
-                              {level1Item}
-                            </td>
-                          )}
-                          {l3Index === 0 && l4Index === 0 && (
-                            <td className="px-4 py-2 border" rowSpan={5 * 5}>
-                              {level2Item}
-                            </td>
-                          )}
-                          {l4Index === 0 && (
-                            <td className="px-4 py-2 border" rowSpan={5}>
-                              {level3Item}
-                            </td>
-                          )}
-                          <td className="px-4 py-2 border">{level4Item}</td>
-                        </tr>
-                      );
-                    });
-                  });
-                });
-
-                return rows;
-              })}
-            </tbody>
-          </table>
+  const renderKeywords = (data) => {
+    if (!data || !data.keywords || !data.keywords.length) return null;
+    
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold">Keywords ({data.keywords.length})</h3>
+          <button
+            onClick={downloadCSV}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Download CSV
+          </button>
         </div>
-      );
-    } catch (error) {
-      return <div className="text-red-500">Error parsing response: {error.message}</div>;
-    }
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {data.keywords.map((keyword, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-lg shadow p-3 hover:shadow-lg transition-shadow duration-200"
+            >
+              <p className="text-gray-800 text-sm">{keyword}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   const Loader = () => (
@@ -154,7 +134,7 @@ function App() {
         {isLoading ? (
           <Loader />
         ) : response ? (
-          renderTable(response)
+          renderKeywords(response)
         ) : (
           <p className="text-gray-500">No data to display</p>
         )}
